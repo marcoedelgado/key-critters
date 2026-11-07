@@ -269,9 +269,15 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
       <button class="card chunky" data-go="songs"><span class="card-ico">🎵</span><span>Songs</span></button>
       <button class="card chunky" data-go="free"><span class="card-ico">🎹</span><span>Free Play</span></button>
     </div>
-    <div id="nomic-note" class="note-banner hidden">🎤🙈 No microphone — tap the keys instead! 👆🎹</div>
+    <div id="nomic-note" class="note-banner hidden"></div>
     <details class="grown">
       <summary>👪 Grown-ups</summary>
+      <h3>Microphone</h3>
+      <div class="seg" id="mic-toggle">
+        <button class="chunky glass" data-mic="on">🎤 On</button>
+        <button class="chunky glass" data-mic="off">🔇 Off</button>
+      </div>
+      <p id="mic-help">Off stops the app listening completely (the orange mic dot goes away) and it won't ask again until you turn it back on. Tapping the on-screen keys still works. To remove the permission itself, use the iPhone's Settings.</p>
       <h3>Mic sensitivity</h3>
       <div class="seg" id="sens">
         <button class="chunky glass" data-sens="high">High</button>
@@ -587,28 +593,36 @@ function chirp() {
 }
 
 /* ---------- mic ---------- */
-let analyser = null, micBuf = null, micStream = null, micState = 'off', looping = false, lastTick = 0;
+// micState: 'off' (not started yet), 'on', 'denied' (no permission/support), 'disabled' (grown-up turned it off)
+let analyser = null, micSrc = null, micSink = null, micBuf = null, micStream = null, micState = 'off', looping = false, lastTick = 0;
 const work = {};
 const tracker = createNoteTracker();
 let minRms = SENS[store.get('kc-sens', 'medium')] || SENS.medium;
 
+function setSessionType(type) {
+  try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) { /* unsupported */ }
+}
+
 async function startMic() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { micUnavailable(); return; }
+  setSessionType('play-and-record');
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       video: false,
     });
+    if (!store.get('kc-mic', true)) { stream.getTracks().forEach(t => t.stop()); return; } // turned off while asking
+    micStream = stream;
     ensureAudio();
-    const src = ctx.createMediaStreamSource(micStream);
+    micSrc = ctx.createMediaStreamSource(micStream);
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0;
-    const zero = ctx.createGain();
-    zero.gain.value = 0;
-    src.connect(analyser);
-    analyser.connect(zero);
-    zero.connect(ctx.destination); // keeps Safari pulling audio through the analyser
+    micSink = ctx.createGain();
+    micSink.gain.value = 0;
+    micSrc.connect(analyser);
+    analyser.connect(micSink);
+    micSink.connect(ctx.destination); // keeps Safari pulling audio through the analyser
     micBuf = new Float32Array(analyser.fftSize);
     tracker.reset();
     micState = 'on';
@@ -618,13 +632,36 @@ async function startMic() {
     micUnavailable();
   }
 }
+function stopMic() {
+  if (micStream) micStream.getTracks().forEach(t => t.stop()); // releases the mic; iOS indicator goes away
+  [micSrc, analyser, micSink].forEach(n => { if (n) n.disconnect(); });
+  micStream = micSrc = analyser = micSink = null;
+  meterFill.style.width = '0';
+  micState = 'disabled';
+  setSessionType('playback'); // still plays with the silent switch on
+  renderMicState();
+}
+function setMicEnabled(on) {
+  store.set('kc-mic', on);
+  if (on) { ensureAudio(); if (micState !== 'on') startMic(); } // runs inside the tap, so iOS may prompt
+  else stopMic();
+  renderMicToggle();
+}
 function micUnavailable() { micState = 'denied'; renderMicState(); }
 function micEnded() { return micStream && micStream.getAudioTracks().every(t => t.readyState === 'ended'); }
 function renderMicState() {
-  const denied = micState === 'denied';
-  $('#meter').classList.toggle('hidden', denied);
-  $('#nomic-pill').classList.toggle('hidden', !denied);
-  $('#nomic-note').classList.toggle('hidden', !denied);
+  const noMic = micState === 'denied' || micState === 'disabled';
+  $('#meter').classList.toggle('hidden', noMic);
+  $('#nomic-pill').classList.toggle('hidden', !noMic);
+  const note = $('#nomic-note');
+  note.classList.toggle('hidden', !noMic);
+  note.textContent = micState === 'disabled'
+    ? '🔇 Mic is off — tap the keys! 👆🎹'
+    : '🎤🙈 No microphone — tap the keys instead! 👆🎹';
+}
+function renderMicToggle() {
+  const on = store.get('kc-mic', true);
+  document.querySelectorAll('#mic-toggle button').forEach(b => b.classList.toggle('on', (b.dataset.mic === 'on') === on));
 }
 
 const meterFill = $('#meter-fill');
@@ -742,7 +779,8 @@ $('.title').innerHTML = 'Key Critters'.split('').map((ch, i) =>
   ch === ' ' ? ' ' : `<span style="color:${NOTES[i % 7].color}">${ch}</span>`).join('');
 $('#btn-play').addEventListener('click', () => {
   ensureAudio();          // must happen inside the tap for iOS
-  if (micState !== 'on') startMic();
+  if (!store.get('kc-mic', true)) stopMic();
+  else if (micState !== 'on') startMic();
   go('menu');
 });
 
@@ -758,6 +796,10 @@ $('#sens').addEventListener('click', e => {
   store.set('kc-sens', b.dataset.sens);
   minRms = SENS[b.dataset.sens];
   renderSens();
+});
+$('#mic-toggle').addEventListener('click', e => {
+  const b = e.target.closest('button[data-mic]');
+  if (b) setMicEnabled(b.dataset.mic === 'on');
 });
 const resetBtn = $('#btn-reset');
 let resetArmed = 0;
@@ -1000,6 +1042,7 @@ document.addEventListener('dblclick', e => e.preventDefault());
 
 renderStars();
 renderSens();
+renderMicToggle();
 </script>
 </body>
 </html>
