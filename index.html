@@ -152,7 +152,8 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .dot .da { display: none; font-size: 40px; }
 .dot.cur { width: 92px; height: 92px; margin: 0 14px; font-size: 22px; box-shadow: 0 6px 0 rgba(0,0,0,.25), 0 0 0 5px #fff, 0 0 30px var(--c); animation: bob 1.1s ease-in-out infinite; }
 .dot.cur.ps { margin-left: 34px; }
-.dot.cur .da { display: block; }
+.dot.cur .da { display: block; font-size: 36px; }
+.dot.cur .dl { font-size: 17px; margin-top: 2px; }
 .dot.done { opacity: .5; width: 36px; height: 36px; font-size: 15px; }
 .dot.done::after { content: "✓"; position: absolute; right: -5px; top: -7px; font-size: 16px; color: #fff; background: #16a34a; border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; }
 .dot.play { opacity: 1; box-shadow: 0 0 0 5px #fff, 0 0 26px var(--c); }
@@ -211,17 +212,36 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   .menu-cards { grid-template-columns: repeat(3, 1fr); }
   .card { flex-direction: column; justify-content: center; text-align: center; gap: 6px; min-height: 140px; }
 }
+/* Phone on the music stand: short and wide. Everything above the keys must fit in ~170px. */
 @media (orientation: landscape) and (max-height: 560px) {
-  :root { --bs: clamp(90px, 34vh, 170px); }
+  /* bubble fills the height left over after top bar, keyboard and padding */
+  :root { --bs: clamp(90px, calc(100vh - var(--kb-h) - 92px - env(safe-area-inset-bottom, 0px)), 210px); }
   .topbar { padding: 4px 12px; }
   .tb-btn { height: 42px; }
   .pill { height: 38px; font-size: 18px; }
-  #s-copy .stage, #s-free .stage { flex-direction: row; flex-wrap: wrap; align-content: center; }
   .card { min-height: 110px; }
-  .track { min-height: 104px; padding: 8px 0; }
-  .dot.cur { width: 78px; height: 78px; }
-  .dot .da { font-size: 32px; }
-  .stage { gap: 8px 20px; padding-bottom: 6px; }
+  .stage { gap: 8px 24px; padding: 2px 12px 6px; }
+  .round { width: 50px; height: 50px; font-size: 24px; }
+
+  /* Copy Me: levels | bubble | hear + message */
+  #s-copy .stage { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  #levels { flex-direction: column; flex-wrap: nowrap; gap: 8px; justify-self: end; align-items: flex-end; }
+  .lvl { min-height: 40px; padding: 6px 10px; }
+  #s-copy .stage > .row:last-child { flex-direction: column; flex-wrap: nowrap; justify-self: start; align-items: flex-start; gap: 8px; }
+  .msg { font-size: 19px; text-align: left; }
+
+  /* Songs: title and buttons share the top line, track underneath */
+  #s-song .stage { display: grid; grid-template-columns: 1fr auto; align-content: center; gap: 4px 12px; }
+  .song-title { grid-column: 1; grid-row: 1; justify-self: start; padding-left: 8px; }
+  #s-song .row { grid-column: 2; grid-row: 1; flex-wrap: nowrap; gap: 10px; }
+  .track { grid-column: 1 / -1; grid-row: 2; min-height: 100px; padding: 6px 0; }
+  .dot.cur { width: 80px; height: 80px; }
+  .dot.cur .da { font-size: 30px; }
+  .dot.cur .dl { font-size: 15px; }
+
+  /* Free Play: bubble beside the trail */
+  #s-free .stage { flex-direction: row; flex-wrap: nowrap; }
+  .trail { max-width: 62%; justify-content: flex-start; gap: 6px; }
 }
 </style>
 </head>
