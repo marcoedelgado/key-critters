@@ -16,6 +16,19 @@ iPhone's microphone, so the keyboard needs no MIDI or USB. Each note has a colou
 Put matching coloured stickers on the real keys, starting from **middle C**. On a 61-key keyboard
 that's the **3rd C from the left**. A C is the white key just left of each pair of black keys.
 
+## Games
+
+- **🎯 Copy Me**: find the note shown. Eight right-first-time answers fill the ★ row and move up a step.
+  Steps add notes (C D E → C–G → C–B) and take away help: glowing key → no glow → animal only →
+  letter only → by ear. Three tricky rounds in a row step back quietly. Missed notes come up more often.
+- **🦜 Echo**: copy a short pattern the app plays. Patterns grow from 2 to 4 notes.
+- **🎵 Songs**: five songs, played note by note. 🥁 adds a play-along beat (🐢 / 🚶 / 🐇).
+- **🎹 Free Play**: shows every note it hears, with an optional 🥁 beat.
+
+Up to 4 players, each with their own animal, stars and progress. Grown-ups (in the menu) can add or
+rename players, adjust the step, turn finger numbers (1–5 on C–G) and the microphone on or off, and
+set mic sensitivity.
+
 ## Files
 
 - `index.html`: the whole app (inline CSS + JS, no external requests)
